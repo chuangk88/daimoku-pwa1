@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>Daimoku Bank</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(180deg, #F0F5F9 0%, #E6EAF0 100%);
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <div id="app" class="w-full min-h-screen bg-white p-6 sm:p-8 space-y-8 flex flex-col">
+
+        <header class="text-center">
+            <h1 class="text-6xl font-bold text-gray-800">Daimoku Bank</h1>
+            <p class="text-xl text-gray-500 mt-2">Let's chant for everyone's happiness</p>
+        </header>
+
+        <section class="bg-indigo-50 p-6 rounded-lg shadow-inner">
+            <h2 class="text-5xl font-semibold text-indigo-700 mb-4">Current Status</h2>
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-4xl font-medium text-gray-600">Total Chanted:</span>
+                    <span id="total-minutes" class="text-6xl font-bold text-indigo-900">0</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-4xl font-medium text-gray-600">Million Daimoku Chanted:</span>
+                    <span id="million-daimoku-count" class="text-6xl font-bold text-indigo-900">0</span>
+                </div>
+            </div>
+            <div class="mt-6">
+                <div class="bg-gray-200 rounded-full h-5">
+                    <div id="progress-bar" class="bg-indigo-600 h-5 rounded-full transition-all duration-500 ease-in-out" style="width: 0%;"></div>
+                </div>
+                <p id="progress-text" class="text-3xl text-gray-500 mt-2 text-right">0% Complete</p>
+            </div>
+        </section>
+
+        <section class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-5xl font-semibold text-gray-800 mb-4">Add Daimoku Minutes</h2>
+            <form id="tracker-form" class="space-y-4">
+                <div>
+                    <label for="minutes-input" class="block text-3xl font-medium text-gray-700">Minutes chanted:</label>
+                    <input type="number" id="minutes-input" name="minutes" placeholder="e.g., 30" required
+                        class="mt-1 block w-full px-4 py-5 border border-gray-300 rounded-md shadow-sm text-5xl focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 ease-in-out">
+                </div>
+                <button type="submit" id="submit-button"
+                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-5xl font-bold py-5 px-4 rounded-md shadow-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-indigo-300 disabled:cursor-not-allowed">
+                    Add Minutes
+                </button>
+            </form>
+        </section>
+        
+        <div id="message-box" class="p-4 rounded-lg text-3xl hidden"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('tracker-form');
+        const minutesInput = document.getElementById('minutes-input');
+        const totalMinutesDisplay = document.getElementById('total-minutes');
+        const millionDaimokuCountDisplay = document.getElementById('million-daimoku-count');
+        const submitButton = document.getElementById('submit-button');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const messageBox = document.getElementById('message-box');
+
+        const MINUTES_GOAL = 20000;
+
+        function showMessage(message, type = 'success') {
+            messageBox.textContent = message;
+            messageBox.className = 'p-4 rounded-lg text-3xl ' + (type === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700');
+            messageBox.style.display = 'block';
+        }
+
+        function hideMessage() {
+            messageBox.style.display = 'none';
+        }
+        
+        function isAppsScriptEnvironment() {
+            return typeof google !== 'undefined' && typeof google.script !== 'undefined' && typeof google.script.run !== 'undefined';
+        }
+
+        function updateUI(data) {
+            if (data && data.totalMinutes !== undefined && data.totalMinutes !== null && data.millionDaimokuCount !== undefined && data.millionDaimokuCount !== null) {
+                // Convert total minutes into hours and minutes for display
+                const totalMinutes = data.totalMinutes;
+                const hours = Math.floor(totalMinutes / 60);
+                const minutes = totalMinutes % 60;
+                totalMinutesDisplay.textContent = `${hours}h ${minutes}m`;
+
+                millionDaimokuCountDisplay.textContent = data.millionDaimokuCount;
+
+                const progress = (data.totalMinutes / MINUTES_GOAL) * 100;
+                progressBar.style.width = `${Math.min(progress, 100)}%`;
+                progressText.textContent = `${progress.toFixed(2)}% Complete`;
+            } else {
+                showMessage('Error: Failed to retrieve or update data.', 'error');
+            }
+        }
+
+        function fetchTrackerData() {
+            if (!isAppsScriptEnvironment()) {
+                onDataError(new Error("This page is not running in a Google Apps Script environment. Please deploy it as a web app."));
+                return;
+            }
+            submitButton.disabled = true;
+            submitButton.textContent = 'Loading...';
+            google.script.run
+                .withSuccessHandler(onDataSuccess)
+                .withFailureHandler(onDataError)
+                .getTrackerData();
+        }
+
+        function onDataSuccess(data) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Add Minutes';
+            hideMessage();
+            if (data.error) {
+                showMessage(data.error, 'error');
+            } else {
+                updateUI(data);
+            }
+        }
+
+        function onDataError(error) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Add Minutes';
+            showMessage('Failed to connect to the server: ' + error.message, 'error');
+        }
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const minutesToAdd = parseInt(minutesInput.value, 10);
+            
+            if (isNaN(minutesToAdd) || minutesToAdd <= 0) {
+                showMessage('Please enter a valid number of minutes.', 'error');
+                return;
+            }
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'Updating...';
+            hideMessage();
+
+            google.script.run
+                .withSuccessHandler(function(response) {
+                    if (response.error) {
+                        onDataError(response.error);
+                    } else {
+                        updateUI(response);
+                        showMessage('Data updated successfully!');
+                        minutesInput.value = '';
+                    }
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Add Minutes';
+                })
+                .withFailureHandler(onDataError)
+                .updateTrackerData({
+                    minutesToAdd: minutesToAdd
+                });
+        });
+
+        window.addEventListener('load', fetchTrackerData);
+    </script>
+</body>
+</html>
