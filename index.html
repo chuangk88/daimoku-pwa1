@@ -10,12 +10,25 @@
         body {
             font-family: 'Inter', sans-serif;
             background: linear-gradient(180deg, #F0F5F9 0%, #E6EAF0 100%);
+            /* Using flexbox to center the content */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        /* This class scales the entire app container and all its contents */
+        .scaled-container {
+            transform: scale(0.6);
+            /* Important: Prevents scaling from affecting the layout */
+            transform-origin: center center;
         }
     </style>
 </head>
 <body class="min-h-screen">
 
-    <div id="app" class="w-full min-h-screen bg-white p-6 sm:p-8 space-y-8 flex flex-col">
+    <div id="app" class="w-full bg-white p-6 sm:p-8 space-y-8 flex flex-col scaled-container">
 
         <header class="text-center">
             <h1 class="text-6xl font-bold text-gray-800">Daimoku Bank</h1>
